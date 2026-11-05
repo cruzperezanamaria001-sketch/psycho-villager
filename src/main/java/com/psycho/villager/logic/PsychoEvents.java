@@ -3,6 +3,7 @@ package com.psycho.villager.logic;
 import com.psycho.villager.PsychoVillagerMod;
 import com.psycho.villager.command.PsychoCommand;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.npc.Villager;
@@ -33,8 +34,12 @@ public final class PsychoEvents {
         if (event.getLevel().isClientSide()) {
             return;
         }
-        if (entity instanceof Villager villager && PsychoManager.isKiller(villager)) {
-            PsychoManager.register(villager);
+        if (entity instanceof Villager villager) {
+            // Todos los aldeanos tienen nombre (tambien el asesino).
+            VillagerNames.onJoin(villager, event.getLevel().getRandom());
+            if (PsychoManager.isKiller(villager)) {
+                PsychoManager.register(villager);
+            }
         }
     }
 
@@ -45,6 +50,7 @@ public final class PsychoEvents {
         }
         if (event.getEntity() instanceof Villager) {
             PsychoManager.unregister(event.getEntity());
+            VillagerNames.onLeave(event.getEntity());
         }
     }
 
@@ -64,15 +70,24 @@ public final class PsychoEvents {
         if (!(dead.level() instanceof ServerLevel level)) {
             return;
         }
+        Entity attacker = event.getSource().getEntity();
+
+        // Un jugador muere a manos del asesino: queda su cuerpo con su skin.
+        if (dead instanceof ServerPlayer player) {
+            PsychoManager.onPlayerDied(player);
+            if (attacker instanceof Villager killer && PsychoManager.isKiller(killer)) {
+                PsychoManager.onPlayerKilled(level, player, killer);
+            }
+            return;
+        }
+
         if (!(dead instanceof Villager villager)) {
             return;
         }
-        Entity attacker = event.getSource().getEntity();
-
         if (PsychoManager.isKiller(villager)) {
             PsychoManager.onKillerDeath(level, villager, attacker);
-        } else if (attacker != null && PsychoManager.isKiller(attacker)) {
-            PsychoManager.onMurder(level, villager);
+        } else if (attacker instanceof Villager killer && PsychoManager.isKiller(killer)) {
+            PsychoManager.onMurder(level, villager, killer);
         }
     }
 
@@ -93,5 +108,6 @@ public final class PsychoEvents {
     @SubscribeEvent
     public static void onServerStopped(ServerStoppedEvent event) {
         PsychoManager.reset();
+        VillagerNames.reset();
     }
 }

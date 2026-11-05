@@ -39,4 +39,24 @@ public final class Config {
 
     /** Cuantas manchas de sangre se dejan alrededor de un cadaver. */
     public static final int BLOOD_SPLATTERS = 12;
+
+    /** Probabilidad de que el asesino esconda el cuerpo debajo de una cama (si hay una cerca). */
+    public static final float HIDE_BODY_CHANCE = 0.4F;
+    /** Radio (en bloques) en el que busca una cama para esconder el cuerpo. */
+    public static final int HIDE_BODY_RADIUS = 12;
+
+    /** Probabilidad de que, al empezar a cazar, el asesino vaya primero a una ventana (si hay una cerca de la victima). */
+    public static final float WINDOW_CHANCE = 0.3F;
+    /** Radio (en bloques) alrededor de la victima donde busca ventanas. */
+    public static final int WINDOW_SEARCH_RADIUS = 10;
+    /** Ticks que se queda mirando la ventana antes de romperla (20 = 1 segundo). */
+    public static final int WINDOW_LOOK_TICKS = 40;
+
+    /** Ticks que deja un rastro de sangre por donde camina despues de matar. */
+    public static final int BLOOD_TRAIL_TICKS = 400;
+
+    /** Probabilidad de que el asesino suelte una lista de nombres despues de matar. */
+    public static final float LIST_DROP_CHANCE = 0.35F;
+    /** Si es false, el nombre del asesino NO sale en la lista (pista para encontrarlo). */
+    public static final boolean LIST_INCLUDES_KILLER = false;
 }

@@ -1,4 +1,5 @@
 {
   "block.psychovillager.blood_splatter": "Blood Splatter",
-  "entity.psychovillager.villager_corpse": "Villager Corpse"
+  "entity.psychovillager.villager_corpse": "Villager Corpse",
+  "entity.psychovillager.player_corpse": "Body"
 }

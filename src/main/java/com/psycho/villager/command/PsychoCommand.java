@@ -27,7 +27,35 @@ public final class PsychoCommand {
                 .requires(source -> source.hasPermission(2))
                 .then(Commands.literal("spawn").executes(ctx -> spawn(ctx.getSource())))
                 .then(Commands.literal("kill").executes(ctx -> kill(ctx.getSource())))
-                .then(Commands.literal("attack").executes(ctx -> attack(ctx.getSource()))));
+                .then(Commands.literal("attack").executes(ctx -> attack(ctx.getSource())))
+                .then(Commands.literal("window")
+                        .then(Commands.literal("attack").executes(ctx -> windowAttack(ctx.getSource())))));
+    }
+
+    private static int windowAttack(CommandSourceStack source) {
+        List<PsychoManager.KillerState> killers = PsychoManager.allKillers();
+        int count = 0;
+        boolean anyKiller = false;
+        for (PsychoManager.KillerState state : killers) {
+            if (state.villager.isRemoved() || !state.villager.isAlive()) {
+                continue;
+            }
+            anyKiller = true;
+            if (PsychoManager.forceWindowAttack(state)) {
+                count++;
+            }
+        }
+        if (!anyKiller) {
+            source.sendFailure(Component.literal("No hay ningun aldeano asesino cargado en el mundo."));
+            return 0;
+        }
+        if (count == 0) {
+            source.sendFailure(Component.literal(
+                    "No encuentra ninguna ventana (de cristal) cerca de una victima por la que entrar."));
+            return 0;
+        }
+        source.sendSuccess(() -> Component.literal("El aldeano asesino va a una ventana para entrar a matar..."), true);
+        return count;
     }
 
     private static int spawn(CommandSourceStack source) {

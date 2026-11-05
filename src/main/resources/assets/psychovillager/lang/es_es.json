@@ -1,4 +1,5 @@
 {
   "block.psychovillager.blood_splatter": "Mancha de sangre",
-  "entity.psychovillager.villager_corpse": "Cadáver de aldeano"
+  "entity.psychovillager.villager_corpse": "Cadáver de aldeano",
+  "entity.psychovillager.player_corpse": "Cuerpo"
 }

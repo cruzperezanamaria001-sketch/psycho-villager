@@ -17,6 +17,19 @@ Hay que encontrarlo y matarlo.
 - Si le pegas al asesino se defiende y te persigue.
 - Cuando lo matas, sale un mensaje para todos los jugadores.
 
+## Cosas extra
+
+- **Todos los aldeanos tienen nombre**, tambien el asesino (no se repiten entre los cargados).
+- A veces el asesino **esconde el cuerpo debajo de una cama** cercana.
+- Si el asesino **te mata**, queda **tu cuerpo con tu skin** en el suelo. Despues no vuelve a por ti
+  hasta que le **pegues otra vez**.
+- Los **cuerpos no empujan** ni se dejan empujar.
+- El asesino **abre las puertas** de madera mientras caza.
+- A veces **suelta un libro con una lista de nombres** de aldeanos (el asesino no sale en ella,
+  se cambia en `Config.LIST_INCLUDES_KILLER`).
+- A veces **mira una ventana, la rompe y entra agachado** a por su victima.
+- Despues de matar deja un **rastro de sangre** al caminar y se oye un **latido** cuando caza cerca de ti.
+
 ## Comandos (necesitan ser operador)
 
 | Comando | Que hace |
@@ -24,6 +37,7 @@ Hay que encontrarlo y matarlo.
 | `/psycho spawn` | Aparece un aldeano asesino donde estas |
 | `/psycho kill` | Mata al aldeano asesino |
 | `/psycho attack` | El asesino ataca ahora mismo al aldeano/jugador mas cercano |
+| `/psycho window attack` | Va a una ventana, la mira, la rompe, entra agachado y ataca |
 
 ## Compilar con GitHub
 

@@ -2,6 +2,7 @@ package com.psycho.villager.registry;
 
 import com.psycho.villager.PsychoVillagerMod;
 import com.psycho.villager.entity.CorpseEntity;
+import com.psycho.villager.entity.PlayerCorpseEntity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraftforge.registries.DeferredRegister;
@@ -19,4 +20,10 @@ public final class ModEntities {
                     .sized(1.0F, 0.5F)
                     .clientTrackingRange(8)
                     .build("villager_corpse"));
+
+    public static final RegistryObject<EntityType<PlayerCorpseEntity>> PLAYER_CORPSE = ENTITIES.register("player_corpse",
+            () -> EntityType.Builder.<PlayerCorpseEntity>of(PlayerCorpseEntity::new, MobCategory.MISC)
+                    .sized(1.0F, 0.5F)
+                    .clientTrackingRange(8)
+                    .build("player_corpse"));
 }

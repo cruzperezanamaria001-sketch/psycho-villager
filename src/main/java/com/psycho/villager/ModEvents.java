@@ -14,5 +14,6 @@ public final class ModEvents {
     @SubscribeEvent
     public static void onAttributes(EntityAttributeCreationEvent event) {
         event.put(ModEntities.CORPSE.get(), Mob.createMobAttributes().build());
+        event.put(ModEntities.PLAYER_CORPSE.get(), Mob.createMobAttributes().build());
     }
 }

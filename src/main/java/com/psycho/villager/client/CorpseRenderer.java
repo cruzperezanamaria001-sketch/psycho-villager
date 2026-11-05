@@ -25,7 +25,13 @@ public class CorpseRenderer extends MobRenderer<CorpseEntity, VillagerModel<Corp
     protected void setupRotations(CorpseEntity entity, PoseStack poseStack, float ageInTicks,
                                   float rotationYaw, float partialTicks) {
         super.setupRotations(entity, poseStack, ageInTicks, rotationYaw, partialTicks);
-        // Centra el cuerpo tumbado sobre la posicion de la entidad y lo sube un poco para que no se hunda.
-        poseStack.translate(0.27D, -0.95D, 0.0D);
+        if (entity.isHiddenBody()) {
+            // Cuerpo escondido bajo una cama: aplastado para que quepa debajo.
+            poseStack.translate(0.1D, -0.95D, 0.0D);
+            poseStack.scale(0.35F, 1.0F, 1.0F);
+        } else {
+            // Centra el cuerpo tumbado sobre la posicion de la entidad y lo sube un poco para que no se hunda.
+            poseStack.translate(0.27D, -0.95D, 0.0D);
+        }
     }
 }
