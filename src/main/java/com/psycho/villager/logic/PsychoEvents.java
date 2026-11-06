@@ -1,9 +1,13 @@
 package com.psycho.villager.logic;
 
+import com.psycho.villager.Config;
 import com.psycho.villager.PsychoVillagerMod;
 import com.psycho.villager.command.PsychoCommand;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.npc.Villager;
@@ -14,6 +18,7 @@ import net.minecraftforge.event.entity.EntityJoinLevelEvent;
 import net.minecraftforge.event.entity.EntityLeaveLevelEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
+import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.server.ServerStoppedEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -103,6 +108,43 @@ public final class PsychoEvents {
                 PsychoManager.onKillerHurtByPlayer(state, player);
             }
         }
+    }
+
+    /** Clic derecho sobre un aldeano: abre el menu de interrogatorio (agachado, si asi esta en Config). */
+    @SubscribeEvent
+    public static void onInteractVillager(PlayerInteractEvent.EntityInteract event) {
+        if (event.getLevel().isClientSide() || !(event.getEntity() instanceof ServerPlayer player)) {
+            return;
+        }
+        if (!(event.getTarget() instanceof Villager villager) || !villager.isAlive()) {
+            return;
+        }
+        if (Config.INTERROGATE_REQUIRES_SNEAK && !player.isShiftKeyDown()) {
+            return; // clic normal: comercia como siempre
+        }
+        if (event.getHand() == InteractionHand.MAIN_HAND) {
+            Interrogation.openMenu(player, villager);
+        }
+        event.setCancellationResult(InteractionResult.SUCCESS);
+        event.setCanceled(true);
+    }
+
+    /** Abrir el libro Registro de investigaciones: se actualiza con lo ultimo descubierto. */
+    @SubscribeEvent
+    public static void onUseLogBook(PlayerInteractEvent.RightClickItem event) {
+        if (event.getLevel().isClientSide() || !(event.getEntity() instanceof ServerPlayer player)) {
+            return;
+        }
+        ItemStack stack = event.getItemStack();
+        if (!InvestigationLog.isLog(stack) || !(player.level() instanceof ServerLevel level)) {
+            return;
+        }
+        InvestigationLog.refresh(level, stack);
+        // Primero se envian las paginas nuevas y despues se abre el libro.
+        player.containerMenu.broadcastChanges();
+        player.openItemGui(stack, event.getHand());
+        event.setCancellationResult(InteractionResult.SUCCESS);
+        event.setCanceled(true);
     }
 
     @SubscribeEvent

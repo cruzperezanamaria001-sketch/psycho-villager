@@ -1,4 +1,4 @@
-# Psycho Villager
+# Psycho Villager (versión 1.1.0)
 
 Mod para **Minecraft Java 1.20.1** con **Forge 47.4.10** (Java 17).
 
@@ -30,7 +30,18 @@ Hay que encontrarlo y matarlo.
 - A veces **mira una ventana, la rompe y entra agachado** a por su victima.
 - Despues de matar deja un **rastro de sangre** al caminar y se oye un **latido** cuando caza cerca de ti.
 
-## Comandos (necesitan ser operador)
+## Novedades de la 1.1.0 (detectives)
+
+- **Testigos:** los aldeanos que ven un asesinato lo recuerdan (nombre del asesino, ropa, lugar,
+  hora, hacia donde huyo) y reaccionan: se esconden, piden ayuda, se paralizan o huyen.
+- **Interrogar:** agachado + clic derecho sobre un aldeano → menu de 4 preguntas en el chat.
+  El clic normal sigue comerciando (cambialo con `INTERROGATE_REQUIRES_SNEAK` en `Config.java`).
+- **Registro de investigaciones:** libro con casos, testigos y pistas; se actualiza al abrirlo.
+- **Fingir inocencia:** el asesino parece un aldeano normal, reacciona si lo miras y tiene un
+  nivel de sospecha (30 te evita, 50 cambia de zona, 70 esconde pruebas).
+- Mas detalle en `CHANGELOG.md`.
+
+## Comandos (los de operador necesitan permiso 2; `book` y `ask` son para todos)
 
 | Comando | Que hace |
 |---|---|
@@ -38,6 +49,8 @@ Hay que encontrarlo y matarlo.
 | `/psycho kill` | Mata al aldeano asesino |
 | `/psycho attack` | El asesino ataca ahora mismo al aldeano/jugador mas cercano |
 | `/psycho window attack` | Va a una ventana, la mira, la rompe, entra agachado y ataca |
+| `/psycho book` | Te da el libro Registro de investigaciones (todos los jugadores) |
+| `/psycho ask <aldeano> <1-4>` | Lo usa el menu de interrogatorio al pulsar una pregunta |
 
 ## Compilar con GitHub
 

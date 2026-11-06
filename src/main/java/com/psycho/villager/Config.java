@@ -55,6 +55,41 @@ public final class Config {
     /** Ticks que deja un rastro de sangre por donde camina despues de matar. */
     public static final int BLOOD_TRAIL_TICKS = 400;
 
+    // ---------------------------------------------------------------- v1.1.0: testigos
+
+    /** Hasta donde (bloques) puede un aldeano ver el asesinato como testigo. */
+    public static final double WITNESS_RANGE = 32.0D;
+    /** Hasta donde (bloques) puede reconocer al asesino. Mas lejos: ve algo, pero no sabe quien fue. */
+    public static final double IDENTIFY_RANGE = 16.0D;
+    /** Probabilidad de que un aldeano que lo ve se convierta en testigo. */
+    public static final float WITNESS_CHANCE = 0.6F;
+    /** Cuantos asesinatos recuerda cada testigo como maximo. */
+    public static final int MAX_MEMORIES = 5;
+    /** true: agachado + clic derecho interroga (clic normal sigue comerciando). false: clic derecho siempre interroga. */
+    public static final boolean INTERROGATE_REQUIRES_SNEAK = true;
+    /** Hora del dia (ticks) en que se apunta donde esta cada aldeano para "¿Donde estabas anoche?". */
+    public static final int NIGHT_SNAPSHOT_TICK = 15000;
+
+    // ---------------------------------------------------------------- v1.1.0: inocencia
+
+    /** Cada noche el asesino empieza a cazar pasado un tiempo al azar (ticks despues del anochecer). */
+    public static final int HUNT_DELAY_MIN = 600;
+    public static final int HUNT_DELAY_MAX = 6000;
+    /** A que distancia (bloques) cuenta que un jugador lo esta mirando. */
+    public static final double WATCH_RANGE = 24.0D;
+    /** Ticks mirandolo seguidos hasta que sube la sospecha. */
+    public static final int GAZE_THRESHOLD = 60;
+    /** Ticks con un jugador pegado a el hasta que sube la sospecha. */
+    public static final int FOLLOW_THRESHOLD = 200;
+    /** Cuanto sube la sospecha cuando un testigo lo acusa. */
+    public static final int EVIDENCE_SUSPICION = 15;
+    /** Niveles de sospecha (0 a 100): evita al jugador / cambia de zona / esconde pruebas. */
+    public static final int SUSPICION_AVOID = 30;
+    public static final int SUSPICION_ZONE = 50;
+    public static final int SUSPICION_HIDE = 70;
+    /** Si lo miran mientras va a matar, espera como mucho esto (ticks) antes de atacar igualmente. */
+    public static final int WATCHED_MAX_DELAY = 600;
+
     /** Probabilidad de que el asesino suelte una lista de nombres despues de matar. */
     public static final float LIST_DROP_CHANCE = 0.35F;
     /** Si es false, el nombre del asesino NO sale en la lista (pista para encontrarlo). */

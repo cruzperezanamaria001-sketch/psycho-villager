@@ -2,6 +2,7 @@ package com.psycho.villager.logic;
 
 import com.psycho.villager.Config;
 import com.psycho.villager.block.BloodBlock;
+import com.psycho.villager.data.InvestigationData;
 import com.psycho.villager.data.PsychoData;
 import com.psycho.villager.entity.CorpseEntity;
 import com.psycho.villager.entity.PlayerCorpseEntity;
@@ -88,6 +89,32 @@ public final class PsychoManager {
         /** Jugadores a los que ya mato: no los vuelve a atacar hasta que ellos le peguen otra vez. */
         public final Set<UUID> spared = new HashSet<>();
 
+        // --- v1.1.0: inocencia fingida y sospecha ---
+        /** Sospecha del asesino (0 a 100). Se guarda en el propio aldeano. */
+        public int suspicion;
+        public int gazeTicks;
+        public int followTicks;
+        public int calmTicks;
+        /** Hora del dia (ticks) en que empieza a cazar esta noche. */
+        public int huntStart = (int) Config.NIGHT_START + Config.HUNT_DELAY_MIN;
+        public boolean wasHunting;
+        /** Ticks que lleva esperando porque lo estan mirando justo antes de atacar. */
+        public int watchDelay;
+        /** Jugador que lo esta mirando ahora mismo (se actualiza cada 5 ticks). */
+        public ServerPlayer watcher;
+        public boolean nearPlayer;
+        public Innocence.Action fakeAction = Innocence.Action.NONE;
+        public int fakeTicks;
+        public Vec3 fakeDest;
+        public UUID fakeLookId;
+        public int reactCooldown;
+        public int zoneCooldown;
+        public int cleanCooldown;
+
+        public boolean watched() {
+            return this.watcher != null;
+        }
+
         public KillerState(Villager villager) {
             this.villager = villager;
         }
@@ -98,6 +125,7 @@ public final class PsychoManager {
 
     private static final Map<UUID, KillerState> KILLERS = new LinkedHashMap<>();
     private static long lastAutoDay = -1L;
+    private static long lastSnapshotDay = -1L;
 
     // ------------------------------------------------------------------ utilidades
 
@@ -125,6 +153,7 @@ public final class PsychoManager {
                     // nombre raro: se ignora
                 }
             }
+            state.suspicion = villager.getPersistentData().getInt("PsychoSuspicion");
             return state;
         });
     }
@@ -144,6 +173,8 @@ public final class PsychoManager {
     public static void reset() {
         KILLERS.clear();
         lastAutoDay = -1L;
+        lastSnapshotDay = -1L;
+        WitnessSystem.reset();
     }
 
     /** Convierte a un aldeano en el asesino. */
@@ -174,6 +205,16 @@ public final class PsychoManager {
         if (night && Config.AUTO_CHOOSE_KILLER && day != lastAutoDay) {
             lastAutoDay = day;
             autoChoose(level);
+        }
+
+        // Testigos que reaccionan y recuerdan hacia donde huyo el asesino.
+        WitnessSystem.tickLevel(level);
+
+        // Una vez por noche se apunta donde esta cada aldeano (para "¿Donde estabas anoche?").
+        if (overworld && timeOfDay >= Config.NIGHT_SNAPSHOT_TICK && timeOfDay < Config.NIGHT_SNAPSHOT_TICK + 100
+                && day != lastSnapshotDay) {
+            lastSnapshotDay = day;
+            snapshotNight(level, day);
         }
 
         if (KILLERS.isEmpty()) {
@@ -207,10 +248,20 @@ public final class PsychoManager {
 
     private static void tickKiller(ServerLevel level, KillerState state, boolean night, long day) {
         Villager killer = state.villager;
+        long timeOfDay = level.getDayTime() % 24000L;
 
         if (state.day != day) {
             state.day = day;
             state.nightKills = 0;
+            // Cada noche empieza a cazar a una hora distinta; hasta entonces es un aldeano normal.
+            state.huntStart = (int) Config.NIGHT_START + Config.HUNT_DELAY_MIN
+                    + level.random.nextInt(Math.max(1, Config.HUNT_DELAY_MAX - Config.HUNT_DELAY_MIN));
+        }
+        // Cada 5 ticks: quien lo mira, quien esta cerca, y como cambia su sospecha.
+        if (killer.tickCount % 5 == 0) {
+            state.watcher = Innocence.findWatcher(level, killer, Config.WATCH_RANGE);
+            state.nearPlayer = level.getNearestPlayer(killer, 8.0D) != null;
+            Innocence.updateSuspicion(state);
         }
         if (state.cooldown > 0) {
             state.cooldown--;
@@ -230,13 +281,23 @@ public final class PsychoManager {
         if (forced) {
             state.forcedTicks--;
         }
-        boolean hunting = forced || (night && state.nightKills < Config.MAX_KILLS_PER_NIGHT);
+        boolean hunting = forced
+                || (night && timeOfDay >= state.huntStart && state.nightKills < Config.MAX_KILLS_PER_NIGHT);
 
         if (!hunting) {
+            // Estado INOCENTE: aldeano normal (sin espada ni particulas) que finge actividades.
             state.target = null;
+            state.wasHunting = false;
+            state.watchDelay = 0;
             cancelWindow(state);
             setWeapon(killer, false);
+            Innocence.tickInnocent(level, state, night);
             return;
+        }
+        // Estado CAZANDO: cualquier accion falsa se cancela para que no estorbe al ataque.
+        if (!state.wasHunting) {
+            state.wasHunting = true;
+            Innocence.endFake(state);
         }
 
         // Validar objetivo actual.
@@ -263,7 +324,9 @@ public final class PsychoManager {
             return;
         }
 
-        setWeapon(killer, true);
+        // Si lo estan mirando mientras va a por un aldeano, disimula: sin espada ni particulas.
+        boolean openAttack = forced || target instanceof Player || !state.watched();
+        setWeapon(killer, openAttack);
         if (killer.isSleeping()) {
             killer.stopSleeping();
         }
@@ -275,7 +338,7 @@ public final class PsychoManager {
             return;
         }
 
-        if (killer.tickCount % 40 == 0) {
+        if (openAttack && killer.tickCount % 40 == 0) {
             heartbeat(level, killer);
         }
         killer.getLookControl().setLookAt(target, 30.0F, 30.0F);
@@ -288,7 +351,7 @@ public final class PsychoManager {
             openDoors(level, killer);
         }
 
-        if (killer.tickCount % 20 == 0) {
+        if (openAttack && killer.tickCount % 20 == 0) {
             level.sendParticles(ParticleTypes.ANGRY_VILLAGER, killer.getX(), killer.getY() + 2.1D, killer.getZ(),
                     1, 0.2D, 0.1D, 0.2D, 0.0D);
         }
@@ -309,7 +372,17 @@ public final class PsychoManager {
         }
 
         if (inReach && state.cooldown <= 0) {
-            strike(level, state, target, forced);
+            if (!openAttack && state.watchDelay < Config.WATCHED_MAX_DELAY) {
+                // Lo estan mirando: no ataca todavia. Se detiene, mira al jugador y espera.
+                state.watchDelay++;
+                killer.getNavigation().stop();
+                if (state.watcher != null) {
+                    killer.getLookControl().setLookAt(state.watcher, 30.0F, 30.0F);
+                }
+            } else {
+                state.watchDelay = 0;
+                strike(level, state, target, forced);
+            }
         }
     }
 
@@ -566,6 +639,10 @@ public final class PsychoManager {
         for (Villager villager : level.getEntitiesOfClass(Villager.class, area,
                 v -> v != killer && v.isAlive() && !isKiller(v))) {
             double d = killer.distanceToSqr(villager);
+            // Los testigos que lo reconocieron son sus victimas preferidas.
+            if (WitnessSystem.knowsKiller(villager, killer)) {
+                d *= 0.25D;
+            }
             if (d < bestDist) {
                 bestDist = d;
                 best = villager;
@@ -623,6 +700,8 @@ public final class PsychoManager {
 
     /** Un jugador golpea al asesino: se defiende y le persigue un rato. */
     public static void onKillerHurtByPlayer(KillerState state, Player player) {
+        // Si lo atacan, deja de fingir inocencia.
+        Innocence.onAttacked(state);
         // Si le pegas otra vez, vuelve a poder atacarte.
         if (state.spared.remove(player.getUUID())) {
             saveSpared(state);
@@ -635,8 +714,30 @@ public final class PsychoManager {
 
     // ------------------------------------------------------------------ muertes
 
+    /** Apunta el crimen en el cuaderno y deja que los aldeanos cercanos lo vean (testigos). */
+    private static void registerCrime(ServerLevel level, LivingEntity victim, String victimName, Villager killer) {
+        long time = level.getDayTime();
+        int id = InvestigationData.get(level).addCrime(victimName, victim.blockPosition(), time / 24000L,
+                (int) (time % 24000L));
+        WitnessSystem.onCrime(level, killer, victim, victimName, id);
+    }
+
+    /** Apunta donde esta cada aldeano esta noche. */
+    private static void snapshotNight(ServerLevel level, long day) {
+        for (Villager v : level.getEntities(EntityTypeTest.forClass(Villager.class), x -> x.isAlive())) {
+            CompoundTag t = new CompoundTag();
+            t.putLong("Day", day);
+            t.putInt("X", v.getBlockX());
+            t.putInt("Y", v.getBlockY());
+            t.putInt("Z", v.getBlockZ());
+            v.getPersistentData().put("PsychoNight", t);
+        }
+    }
+
     /** Un aldeano muere asesinado por el asesino. */
     public static void onMurder(ServerLevel level, Villager victim, Villager killer) {
+        // Primero los testigos (antes de quitar el cuerpo).
+        registerCrime(level, victim, VillagerNames.nameOf(victim), killer);
         if (level.random.nextFloat() < Config.SCREAM_CHANCE) {
             scream(level, victim);
         }
@@ -664,6 +765,7 @@ public final class PsychoManager {
 
     /** El asesino mata a un jugador: queda su cuerpo con su skin en el suelo. */
     public static void onPlayerKilled(ServerLevel level, ServerPlayer player, Villager killer) {
+        registerCrime(level, player, player.getName().getString(), killer);
         level.sendParticles(new DustParticleOptions(new Vector3f(0.55F, 0.0F, 0.0F), 1.5F),
                 player.getX(), player.getY() + 0.6D, player.getZ(), 45, 0.4D, 0.5D, 0.4D, 0.02D);
 
@@ -724,6 +826,7 @@ public final class PsychoManager {
         tag.putString("title", "Lista de nombres");
         tag.putString("author", "???");
         tag.put("pages", pages);
+        tag.putBoolean("PsychoList", true);
 
         ItemEntity drop = new ItemEntity(level, killer.getX(), killer.getY() + 0.5D, killer.getZ(), book);
         drop.setDefaultPickUpDelay();
@@ -733,6 +836,12 @@ public final class PsychoManager {
     /** El asesino muere. */
     public static void onKillerDeath(ServerLevel level, Villager killer, Entity cause) {
         PsychoData.get(level).setKillerChosen(true);
+        // Suelta lo que haya escondido (por ejemplo, la lista de nombres).
+        for (ItemStack hidden : killer.getInventory().removeAllItems()) {
+            if (!hidden.isEmpty()) {
+                level.addFreshEntity(new ItemEntity(level, killer.getX(), killer.getY() + 0.5D, killer.getZ(), hidden));
+            }
+        }
         leaveBody(level, killer, false);
         Component message;
         if (cause instanceof Player player) {
